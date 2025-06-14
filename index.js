@@ -1,4 +1,4 @@
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
@@ -7,14 +7,9 @@ const port = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-//Blogs-app-user
-//0smfBrvobsIPAdoG
-// console.log(process.env.DB_USER);
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.on3ghb8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
-// "mongodb+srv://<db_username>:<db_password>@cluster0.on3ghb8.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
-// Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
   serverApi: {
     version: ServerApiVersion.v1,
@@ -25,28 +20,89 @@ const client = new MongoClient(uri, {
 
 async function run() {
   try {
-    // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
     const blogCollection = client.db("BlogDB").collection("Blogs");
+    const commentCollection = client.db("BlogDB").collection("comments");
 
+    // Get all blogs
     app.get("/allBlogs", async (req, res) => {
       const result = await blogCollection.find().toArray();
       res.send(result);
     });
 
+    // Get a single blog by ID
+    app.get("/allBlogs/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await blogCollection.findOne(query);
+      res.send(result);
+    });
+
+    // Add a new blog
     app.post("/blog", async (req, res) => {
       const newBlog = req.body;
       const result = await blogCollection.insertOne(newBlog);
-      console.log(newBlog);
       res.send(result);
     });
-    // Send a ping to confirm a successful connection
+
+    //Add update blog
+    app.put("/blogs/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const options = { upsert: true };
+      const updateBlog = req.body;
+      const updatedDoc = {
+        $set: updateBlog,
+      };
+
+      const result = await blogCollection.updateOne(
+        filter,
+        updatedDoc,
+        options
+      );
+      res.send(result);
+    });
+
+    // Get comments by blog ID
+    app.get("/comments/:blogId", async (req, res) => {
+      const { blogId } = req.params;
+      try {
+        const comments = await commentCollection
+          .find({ blogId: new ObjectId(blogId) })
+          .sort({ createdAt: -1 })
+          .toArray();
+        res.send(comments);
+      } catch (error) {
+        res.status(500).send({ message: "Error fetching comments", error });
+      }
+    });
+
+    // Add a new comment
+    app.post("/comments", async (req, res) => {
+      const { blogId, username, userPhoto, email, comment } = req.body;
+      if (!blogId || !username || !comment) {
+        return res.status(400).send({ message: "Missing required fields" });
+      }
+      try {
+        const newComment = {
+          blogId: new ObjectId(blogId),
+          username,
+          userPhoto,
+          email,
+          comment,
+          createdAt: new Date(),
+        };
+        const result = await commentCollection.insertOne(newComment);
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Error saving comment", error });
+      }
+    });
+
     await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
+    console.log("✅ Connected to MongoDB");
   } finally {
-    // Ensures that the client will close when you finish/error
+    // Do not close the connection here because server is running
   }
 }
 run().catch(console.dir);
@@ -56,5 +112,5 @@ app.get("/", (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Blogs server is running on port ${port}`);
+  console.log(` Blogs server is running on port ${port}`);
 });
