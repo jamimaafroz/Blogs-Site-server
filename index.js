@@ -110,7 +110,7 @@ async function run() {
       }
     });
 
-    // Get wishlist by user email (filtering server-side)
+    // Get wishlist (filtering server-side)
     app.get("/wishlist/:email", async (req, res) => {
       try {
         const email = req.params.email;
