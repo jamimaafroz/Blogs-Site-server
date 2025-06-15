@@ -23,6 +23,7 @@ async function run() {
     await client.connect();
     const blogCollection = client.db("BlogDB").collection("Blogs");
     const commentCollection = client.db("BlogDB").collection("comments");
+    const wishlistCollection = client.db("BlogDB").collection("wishlist");
 
     // Get all blogs
     app.get("/allBlogs", async (req, res) => {
@@ -74,6 +75,66 @@ async function run() {
         res.send(comments);
       } catch (error) {
         res.status(500).send({ message: "Error fetching comments", error });
+      }
+    });
+
+    // Add to wishlist
+    app.post("/wishlist", async (req, res) => {
+      try {
+        const item = req.body;
+        const existing = await wishlistCollection.findOne({
+          blogId: item.blogId,
+          userEmail: item.userEmail,
+        });
+
+        if (existing) {
+          return res
+            .status(400)
+            .send({ acknowledged: false, message: "Already in wishlist" });
+        }
+
+        const result = await wishlistCollection.insertOne(item);
+        if (result.acknowledged) {
+          return res.send({
+            acknowledged: true,
+            item: { ...item, _id: result.insertedId },
+          });
+        } else {
+          res
+            .status(500)
+            .send({ acknowledged: false, message: "Insert failed" });
+        }
+      } catch (error) {
+        console.error("Add wishlist error:", error);
+        res.status(500).send({ acknowledged: false, message: "Server error" });
+      }
+    });
+
+    // Get wishlist by user email (filtering server-side)
+    app.get("/wishlist/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+        const wishlistItems = await wishlistCollection
+          .find({ userEmail: email })
+          .toArray();
+        res.send(wishlistItems);
+      } catch (error) {
+        console.error("Get wishlist error:", error);
+        res.status(500).send({ message: "Failed to get wishlist" });
+      }
+    });
+
+    // Remove from wishlist by wishlist document _id
+    app.delete("/wishlist/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+        const result = await wishlistCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+        res.send(result);
+      } catch (error) {
+        console.error("Delete wishlist error:", error);
+        res.status(500).send({ message: "Failed to delete wishlist item" });
       }
     });
 
