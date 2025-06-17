@@ -1,3 +1,4 @@
 node_modules
 .env
 firebase-adminsdk-accessKey.json
+.vercel
