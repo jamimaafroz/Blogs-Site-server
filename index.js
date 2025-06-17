@@ -92,12 +92,21 @@ async function run() {
     app.get("/comments/:blogId", async (req, res) => {
       const { blogId } = req.params;
       try {
+        const query = {
+          $or: [
+            { blogId: new ObjectId(blogId) },
+            { blogId: blogId }, // as string fallback
+          ],
+        };
+
         const comments = await commentCollection
-          .find({ blogId: new ObjectId(blogId) })
+          .find(query)
           .sort({ createdAt: -1 })
           .toArray();
+
         res.send(comments);
       } catch (error) {
+        console.error("Error fetching comments:", error);
         res.status(500).send({ message: "Error fetching comments", error });
       }
     });
