@@ -2,10 +2,15 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const admin = require("firebase-admin");
-const serviceAccount = require("./firebase-adminsdk-accessKey.json");
 const app = express();
 const port = process.env.PORT || 3000;
+
+const admin = require("firebase-admin");
+
+const decoded = Buffer.from(process.env.FB_SERVICES_KEY, "base64").toString(
+  "utf8"
+);
+const serviceAccount = JSON.parse(decoded);
 
 app.use(cors());
 app.use(express.json());
