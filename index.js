@@ -48,7 +48,6 @@ const verifyFireBaseToken = async (req, res, next) => {
 
 async function run() {
   try {
-    await client.connect();
     const blogCollection = client.db("BlogDB").collection("Blogs");
     const commentCollection = client.db("BlogDB").collection("comments");
     const wishlistCollection = client.db("BlogDB").collection("wishlist");
